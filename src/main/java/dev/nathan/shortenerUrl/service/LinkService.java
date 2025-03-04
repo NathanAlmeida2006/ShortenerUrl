@@ -1,60 +1,15 @@
 package dev.nathan.shortenerUrl.service;
 
-import dev.nathan.shortenerUrl.model.Link;
-import dev.nathan.shortenerUrl.repository.LinkRepository;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.stereotype.Service;
+import dev.nathan.shortenerUrl.dto.LinkRequest;
+import dev.nathan.shortenerUrl.dto.LinkResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
-import java.time.LocalDateTime;
+import java.io.IOException;
 
-/**
- * Service for managing shortened links.
- */
-@Data
-@AllArgsConstructor
-@Service
-public class LinkService {
+public interface LinkService {
+    LinkResponse createShortLink(LinkRequest request, String host);
 
-    private final LinkRepository linkRepository;
+    LinkResponse getLinkDetails(String shortenedUrl, String host);
 
-    /**
-     * Generates a random URL string.
-     *
-     * @return A random URL string.
-     */
-    public String generateRandomUrl() {
-        return RandomStringUtils.randomAlphabetic(5, 10);
-    }
-
-    /**
-     * Shortens an original URL.
-     *
-     * @param originalUrl The original URL.
-     * @return The shortened Link.
-     */
-    public Link shortenUrl(String originalUrl) {
-        Link link = new Link();
-        link.setOriginalUrl(originalUrl);
-        link.setShortenedUrl(generateRandomUrl());
-        link.setCreatedAt(LocalDateTime.now());
-        link.setQrCodeUrl("QR unavailable!");
-
-        return linkRepository.save(link);
-    }
-
-    /**
-     * Retrieves the original URL from a shortened URL.
-     *
-     * @param shortenedUrl The shortened URL.
-     * @return The corresponding Link.
-     */
-    public Link getOriginalUrl(String shortenedUrl) {
-        try {
-            return linkRepository.findByShortenedUrl(shortenedUrl);
-        } catch (Exception e) {
-            throw new RuntimeException("URL does not exist" + e);
-        }
-    }
+    void redirectToOriginalUrl(String shortenedUrl, HttpServletResponse response) throws IOException;
 }

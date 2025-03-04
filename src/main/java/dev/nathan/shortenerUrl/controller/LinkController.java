@@ -1,60 +1,39 @@
 package dev.nathan.shortenerUrl.controller;
 
+import dev.nathan.shortenerUrl.dto.LinkRequest;
 import dev.nathan.shortenerUrl.dto.LinkResponse;
 import dev.nathan.shortenerUrl.service.LinkService;
-import dev.nathan.shortenerUrl.model.Link;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.util.Map;
+import java.net.URI;
 
-/**
- * REST controller for managing shortened links.
- */
-@AllArgsConstructor
 @RestController
+@RequestMapping("/api/v2/links")
+@RequiredArgsConstructor
 public class LinkController {
 
     private final LinkService linkService;
 
-    /**
-     * Generates a shortened URL from an original URL.
-     *
-     * @param request Map containing the original URL.
-     * @return ResponseEntity containing the shortened URL response.
-     */
-    @PostMapping("/shortenURL")
-    public ResponseEntity<LinkResponse> generateShortenedUrl(@RequestBody Map<String, String> request) {
-        String originalUrl = request.get("originalUrl");
-        if (originalUrl == null || originalUrl.isEmpty()) {
-            return ResponseEntity.badRequest().body(null);
-        }
+    @PostMapping
+    public ResponseEntity<LinkResponse> createShortLink(
+            @Valid @RequestBody LinkRequest request,
+            @RequestHeader(name = "Host") String host) {
 
-        Link link = linkService.shortenUrl(originalUrl);
-        String userRedirectUrl = "http://localhost:8080/r/" + link.getShortenedUrl();
-
-        LinkResponse response = new LinkResponse(link.getId(), link.getOriginalUrl(), userRedirectUrl, link.getQrCodeUrl(), link.getCreatedAt());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        LinkResponse response = linkService.createShortLink(request, host);
+        return ResponseEntity
+                .created(URI.create(response.shortenedUrl()))
+                .body(response);
     }
 
-    /**
-     * Redirects to the original URL from a shortened URL.
-     *
-     * @param shortenedUrl The shortened URL.
-     * @param response     HttpServletResponse for the redirection.
-     * @throws IOException if an I/O error occurs.
-     */
-    @GetMapping("/r/{shortenedUrl}")
-    public void redirectLink(@PathVariable String shortenedUrl, HttpServletResponse response) throws IOException {
-        Link link = linkService.getOriginalUrl(shortenedUrl);
-        if (link != null) {
-            response.sendRedirect(link.getOriginalUrl());
-        } else {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-        }
+    @GetMapping("/{shortenedUrl}")
+    public ResponseEntity<LinkResponse> getLinkDetails(
+            @PathVariable String shortenedUrl,
+            @RequestHeader(name = "Host") String host) {
+
+        LinkResponse response = linkService.getLinkDetails(shortenedUrl, host);
+        return ResponseEntity.ok(response);
     }
 }
